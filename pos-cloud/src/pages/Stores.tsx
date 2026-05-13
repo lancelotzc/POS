@@ -15,7 +15,12 @@ interface StoreData {
   tenants?: { name: string; enable_inventory: boolean };
 }
 
+import { useAuth } from '../contexts/AuthContext';
+
 export default function Stores() {
+  const { profile } = useAuth();
+  const isSuperAdmin = profile?.role === 'super_admin';
+
   const [stores, setStores] = useState<StoreData[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -137,12 +142,14 @@ export default function Stores() {
         <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Store /> 門店管理與授權
         </h1>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--accent-color)', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' }}
-        >
-          <Plus size={16} /> 新增門店
-        </button>
+        {isSuperAdmin && (
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--accent-color)', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' }}
+          >
+            <Plus size={16} /> 新增門店
+          </button>
+        )}
       </div>
 
       <div style={{ background: 'var(--bg-app)', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
@@ -156,7 +163,7 @@ export default function Stores() {
               <th style={{ padding: '15px 20px', color: 'var(--text-secondary)', fontWeight: '500' }}>啟用模組</th>
               <th style={{ padding: '15px 20px', color: 'var(--text-secondary)', fontWeight: '500' }}>授權狀態 (License)</th>
               <th style={{ padding: '15px 20px', color: 'var(--text-secondary)', fontWeight: '500' }}>有效期限</th>
-              <th style={{ padding: '15px 20px', textAlign: 'right', color: 'var(--text-secondary)', fontWeight: '500' }}>操作</th>
+              {isSuperAdmin && <th style={{ padding: '15px 20px', textAlign: 'right', color: 'var(--text-secondary)', fontWeight: '500' }}>操作</th>}
             </tr>
           </thead>
           <tbody>
@@ -197,14 +204,16 @@ export default function Stores() {
                         </div>
                       ) : '永久有效'}
                     </td>
-                    <td style={{ padding: '15px 20px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                      <button onClick={() => toggleLicense(s.id, s.is_active)} title={s.is_active ? '停權此門店' : '啟用此門店'} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: s.is_active ? 'var(--danger-bg)' : 'rgba(34, 197, 94, 0.1)', border: 'none', color: s.is_active ? 'var(--danger-color)' : '#16a34a', cursor: 'pointer', padding: '8px', borderRadius: '6px', transition: 'all 0.2s' }}>
-                        <Power size={16} />
-                      </button>
-                      <button onClick={() => openEditModal(s)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--sidebar-hover-bg)', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '8px', borderRadius: '6px', transition: 'all 0.2s' }}>
-                        <Edit2 size={16} />
-                      </button>
-                    </td>
+                    {isSuperAdmin && (
+                      <td style={{ padding: '15px 20px', textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                        <button onClick={() => toggleLicense(s.id, s.is_active)} title={s.is_active ? '停權此門店' : '啟用此門店'} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: s.is_active ? 'var(--danger-bg)' : 'rgba(34, 197, 94, 0.1)', border: 'none', color: s.is_active ? 'var(--danger-color)' : '#16a34a', cursor: 'pointer', padding: '8px', borderRadius: '6px', transition: 'all 0.2s' }}>
+                          <Power size={16} />
+                        </button>
+                        <button onClick={() => openEditModal(s)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--sidebar-hover-bg)', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '8px', borderRadius: '6px', transition: 'all 0.2s' }}>
+                          <Edit2 size={16} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 );
               })

@@ -9,11 +9,12 @@ interface Profile { id: string; full_name: string; role: string; tenant_id: stri
 export default function Staff() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
-  const [selectedTenantId, setSelectedTenantId] = useState('');
   
   // Cloud Users
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterTenantId, setFilterTenantId] = useState('');
+  const [filterStoreId, setFilterStoreId] = useState('');
   
   // Create Modal
   const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
@@ -28,23 +29,14 @@ export default function Staff() {
 
   useEffect(() => {
     fetchTenants();
+    fetchStores();
+    fetchProfiles();
   }, []);
-
-  useEffect(() => {
-    if (selectedTenantId) {
-      fetchStores();
-      fetchProfiles();
-    } else {
-      setStores([]);
-      setProfiles([]);
-    }
-  }, [selectedTenantId]);
 
   const fetchTenants = async () => {
     const { data } = await supabase.from('tenants').select('id, name');
     if (data) {
       setTenants(data);
-      if (data.length > 0) setSelectedTenantId(data[0].id);
     }
   };
 
@@ -56,8 +48,7 @@ export default function Staff() {
 
   const fetchProfiles = async () => {
     setLoading(true);
-    // 取得該商戶下的管理員，以及所有最高權限的 POS商總管理員
-    const { data } = await supabase.from('profiles').select('*').or(`tenant_id.eq.${selectedTenantId},role.eq.super_admin`);
+    const { data } = await supabase.from('profiles').select('*');
     if (data) setProfiles(data);
     setLoading(false);
   };
@@ -83,7 +74,7 @@ export default function Staff() {
           email: newCloudUser.email,
           password: newCloudUser.password,
           role: newCloudUser.role,
-          tenant_id: newCloudUser.role === 'super_admin' ? null : selectedTenantId,
+          tenant_id: newCloudUser.role === 'super_admin' ? null : newCloudUser.tenant_id,
           store_id: newCloudUser.role === 'store_operator' ? newCloudUser.store_id : null,
           full_name: newCloudUser.full_name
         })
@@ -181,10 +172,15 @@ export default function Staff() {
     const email = p.email || '';
     const name = p.full_name || '';
     
-    return name.toLowerCase().includes(searchLower) || 
-           email.toLowerCase().includes(searchLower) ||
-           tenantName.toLowerCase().includes(searchLower) ||
-           storeName.toLowerCase().includes(searchLower);
+    const matchesSearch = name.toLowerCase().includes(searchLower) || 
+                          email.toLowerCase().includes(searchLower) ||
+                          tenantName.toLowerCase().includes(searchLower) ||
+                          storeName.toLowerCase().includes(searchLower);
+                          
+    const matchesTenant = filterTenantId ? p.tenant_id === filterTenantId : true;
+    const matchesStore = filterStoreId ? p.store_id === filterStoreId : true;
+
+    return matchesSearch && matchesTenant && matchesStore;
   });
 
   return (
@@ -193,25 +189,29 @@ export default function Staff() {
         <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Users /> 雲端帳號管理
         </h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>選擇操作商戶：</span>
-          <select value={selectedTenantId} onChange={(e) => setSelectedTenantId(e.target.value)} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', outline: 'none' }}>
-            {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-        </div>
       </div>
 
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-          <div style={{ position: 'relative', width: '300px' }}>
-            <Search size={18} style={{ position: 'absolute', left: '10px', top: '10px', color: 'var(--text-secondary)' }} />
-            <input 
-              type="text" 
-              placeholder="搜尋姓名、Email、商戶或門店..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: '100%', padding: '10px 10px 10px 35px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', boxSizing: 'border-box' }}
-            />
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <div style={{ position: 'relative', width: '250px' }}>
+              <Search size={18} style={{ position: 'absolute', left: '10px', top: '10px', color: 'var(--text-secondary)' }} />
+              <input 
+                type="text" 
+                placeholder="搜尋姓名、Email、商戶或門店..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ width: '100%', padding: '10px 10px 10px 35px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', boxSizing: 'border-box' }}
+              />
+            </div>
+            <select value={filterTenantId} onChange={(e) => { setFilterTenantId(e.target.value); setFilterStoreId(''); }} style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', outline: 'none' }}>
+              <option value="">所有商戶</option>
+              {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+            <select value={filterStoreId} onChange={(e) => setFilterStoreId(e.target.value)} disabled={!filterTenantId} style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', outline: 'none', opacity: filterTenantId ? 1 : 0.5 }}>
+              <option value="">所有門店</option>
+              {stores.filter(s => s.tenant_id === filterTenantId).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
           </div>
           <button onClick={() => setIsCloudModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--accent-color)', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' }}>
             <UserPlus size={16} /> 新增雲端帳號
@@ -255,7 +255,7 @@ export default function Staff() {
                           password: '',
                           full_name: p.full_name || '',
                           role: p.role,
-                          tenant_id: p.tenant_id || selectedTenantId,
+                          tenant_id: p.tenant_id || '',
                           store_id: p.store_id || ''
                         });
                         setIsEditModalOpen(true);
@@ -310,7 +310,7 @@ export default function Staff() {
                 {newCloudUser.role === 'super_admin' ? (
                   <input type="text" readOnly value="無限制 (全品牌)" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-sidebar)', color: 'var(--text-secondary)', boxSizing: 'border-box', cursor: 'not-allowed' }} disabled />
                 ) : (
-                  <select required value={selectedTenantId} onChange={e => setSelectedTenantId(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', boxSizing: 'border-box' }}>
+                  <select required value={newCloudUser.tenant_id || ''} onChange={e => setNewCloudUser({...newCloudUser, tenant_id: e.target.value, store_id: ''})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', boxSizing: 'border-box' }}>
                     <option value="">-- 請選擇商戶 --</option>
                     {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
@@ -321,7 +321,7 @@ export default function Staff() {
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>限制管理門店</label>
                   <select required value={newCloudUser.store_id} onChange={e => setNewCloudUser({...newCloudUser, store_id: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', boxSizing: 'border-box' }}>
                     <option value="">-- 請選擇門店 --</option>
-                    {stores.filter(s => s.tenant_id === selectedTenantId).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    {stores.filter(s => s.tenant_id === newCloudUser.tenant_id).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </div>
               )}
