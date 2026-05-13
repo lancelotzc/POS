@@ -54,7 +54,8 @@ serve(async (req) => {
       tenant_id: tenant_id || null,
       store_id: store_id || null,
       role: role,
-      full_name: full_name || null
+      full_name: full_name || null,
+      email: email
     })
 
     if (profileError) {

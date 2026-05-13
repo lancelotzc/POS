@@ -30,6 +30,7 @@ CREATE TABLE profiles (
     store_id UUID REFERENCES stores(id) ON DELETE SET NULL, -- Null if super/tenant admin
     role user_role NOT NULL,
     full_name VARCHAR(255),
+    email VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
