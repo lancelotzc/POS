@@ -182,23 +182,40 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 
+-- 建立安全函數以避免 RLS 無窮迴圈 (Infinite Recursion)
+CREATE OR REPLACE FUNCTION get_user_role()
+RETURNS text
+LANGUAGE sql
+SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT role::text FROM profiles WHERE id = auth.uid();
+$$;
+
+CREATE OR REPLACE FUNCTION get_user_tenant()
+RETURNS uuid
+LANGUAGE sql
+SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT tenant_id FROM profiles WHERE id = auth.uid();
+$$;
+
 -- 範例：Tenant Admin 只能看到自己的 Tenant 資料
 CREATE POLICY "Tenant Admins can view own tenant" ON tenants
     FOR SELECT USING (
-        id = (SELECT tenant_id FROM profiles WHERE id = auth.uid())
-        OR 'super_admin' = (SELECT role FROM profiles WHERE id = auth.uid())
+        id = get_user_tenant()
+        OR get_user_role() = 'super_admin'
     );
 
 CREATE POLICY "Tenant Admins can view own stores" ON stores
     FOR ALL USING (
-        tenant_id = (SELECT tenant_id FROM profiles WHERE id = auth.uid())
-        OR 'super_admin' = (SELECT role FROM profiles WHERE id = auth.uid())
+        tenant_id = get_user_tenant()
+        OR get_user_role() = 'super_admin'
     );
 
 CREATE POLICY "Users can view profiles" ON profiles
     FOR SELECT USING (
-        'super_admin' = (SELECT role FROM profiles WHERE id = auth.uid())
-        OR tenant_id = (SELECT tenant_id FROM profiles WHERE id = auth.uid())
+        get_user_role() = 'super_admin'
+        OR tenant_id = get_user_tenant()
         OR id = auth.uid()
     );
 
