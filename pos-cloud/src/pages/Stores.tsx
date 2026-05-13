@@ -156,7 +156,7 @@ export default function Stores() {
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
           <thead style={{ background: 'var(--bg-sidebar)', borderBottom: '1px solid var(--border-color)' }}>
             <tr>
-              <th style={{ padding: '15px 20px', color: 'var(--text-secondary)', fontWeight: '500' }}>所屬商戶</th>
+              {isSuperAdmin && <th style={{ padding: '15px 20px', color: 'var(--text-secondary)', fontWeight: '500' }}>所屬商戶</th>}
               <th style={{ padding: '15px 20px', color: 'var(--text-secondary)', fontWeight: '500' }}>門店代號</th>
               <th style={{ padding: '15px 20px', color: 'var(--text-secondary)', fontWeight: '500' }}>門店名稱</th>
               <th style={{ padding: '15px 20px', color: 'var(--text-secondary)', fontWeight: '500' }}>業務模式</th>
@@ -176,7 +176,7 @@ export default function Stores() {
                 const status = getStatusDisplay(s.is_active, s.valid_until);
                 return (
                   <tr key={s.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '15px 20px', color: 'var(--text-secondary)' }}>{s.tenants?.name || '-'}</td>
+                    {isSuperAdmin && <td style={{ padding: '15px 20px', color: 'var(--text-secondary)' }}>{s.tenants?.name || '-'}</td>}
                     <td style={{ padding: '15px 20px', fontWeight: 'bold' }}>{s.store_code}</td>
                     <td style={{ padding: '15px 20px' }}>{s.name}</td>
                     <td style={{ padding: '15px 20px' }}>
