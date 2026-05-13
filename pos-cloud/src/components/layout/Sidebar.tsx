@@ -17,7 +17,7 @@ export default function Sidebar() {
     { path: '/dashboard', name: '儀表板', icon: <LayoutDashboard size={20} />, requireSuperAdmin: false },
     { path: '/hq', name: '商戶管理', icon: <Building2 size={20} />, requireSuperAdmin: true },
     { path: '/stores', name: '門店管理', icon: <Store size={20} />, requireSuperAdmin: false },
-    { path: '/staff', name: '帳號與員工', icon: <Users2 size={20} />, requireSuperAdmin: false },
+    { path: '/staff', name: '帳號管理', icon: <Users2 size={20} />, requireSuperAdmin: false },
     { path: '/menu', name: '菜單管理', icon: <UtensilsCrossed size={20} />, requireSuperAdmin: false },
     { path: '/combos', name: '套餐加料', icon: <PackageOpen size={20} />, requireSuperAdmin: false },
     { path: '/promotions', name: '優惠折扣', icon: <Tag size={20} />, requireSuperAdmin: false },

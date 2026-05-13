@@ -34,18 +34,6 @@ CREATE TABLE profiles (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE employees (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    store_id UUID REFERENCES stores(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    pin_code VARCHAR(10) NOT NULL,
-    role VARCHAR(50) DEFAULT 'staff', -- e.g., 'manager', 'staff'
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(store_id, pin_code) -- ensure pin codes are unique within a store
-);
-
 -- 2. 菜單與基礎資料表 (Products, Categories, Combos, Modifiers)
 CREATE TABLE categories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
