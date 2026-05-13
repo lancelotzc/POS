@@ -13,8 +13,8 @@ import Inventory from './pages/Inventory';
 import Staff from './pages/Staff';
 import './styles/theme.css';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { session, loading } = useAuth();
+function ProtectedRoute({ children, requireSuperAdmin = false }: { children: React.ReactNode, requireSuperAdmin?: boolean }) {
+  const { session, loading, profile } = useAuth();
 
   if (loading) {
     return <div>Loading...</div>;
@@ -22,6 +22,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!session) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (requireSuperAdmin && profile?.role !== 'super_admin') {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <AdminLayout>{children}</AdminLayout>;
@@ -42,9 +46,9 @@ function App() {
           
           {/* Protected Routes wrapped in AdminLayout */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/hq" element={<ProtectedRoute><HQ /></ProtectedRoute>} />
+          <Route path="/hq" element={<ProtectedRoute requireSuperAdmin><HQ /></ProtectedRoute>} />
           <Route path="/stores" element={<ProtectedRoute><Stores /></ProtectedRoute>} />
-          <Route path="/staff" element={<ProtectedRoute><Staff /></ProtectedRoute>} />
+          <Route path="/staff" element={<ProtectedRoute requireSuperAdmin><Staff /></ProtectedRoute>} />
           <Route path="/menu" element={<ProtectedRoute><Menu /></ProtectedRoute>} />
           <Route path="/combos" element={<ProtectedRoute><Combos /></ProtectedRoute>} />
           <Route path="/promotions" element={<ProtectedRoute><div>優惠折扣 (開發中...)</div></ProtectedRoute>} />
