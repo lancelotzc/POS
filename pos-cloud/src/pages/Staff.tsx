@@ -76,8 +76,8 @@ export default function Staff() {
           email: newCloudUser.email,
           password: newCloudUser.password,
           role: newCloudUser.role,
-          tenant_id: selectedTenantId,
-          store_id: newCloudUser.store_id || null,
+          tenant_id: newCloudUser.role === 'super_admin' ? null : selectedTenantId,
+          store_id: newCloudUser.role === 'store_operator' ? newCloudUser.store_id : null,
           full_name: newCloudUser.full_name
         })
       });
@@ -170,8 +170,9 @@ export default function Staff() {
               <div style={{ marginBottom: '15px' }}>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>權限角色</label>
                 <select value={newCloudUser.role} onChange={e => setNewCloudUser({...newCloudUser, role: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', boxSizing: 'border-box' }}>
-                  <option value="tenant_admin">商戶管理員 (管理整個品牌)</option>
-                  <option value="store_operator">門店管理員 (僅管理單一門店)</option>
+                  <option value="tenant_admin">商戶管理員 (管理單一品牌)</option>
+                  <option value="store_operator">門店管理員 (管理單一門店)</option>
+                  <option value="super_admin">POS商總管理員 (可看和異動所有資料)</option>
                 </select>
               </div>
               {newCloudUser.role === 'store_operator' && (
