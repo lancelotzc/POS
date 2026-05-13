@@ -39,6 +39,11 @@ export default function Sidebar() {
         <div>
           <h2>POS Cloud</h2>
           <span className="user-email">{user?.email}</span>
+          <div style={{ fontSize: '12px', marginTop: '4px', padding: '2px 6px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', display: 'inline-block', color: 'var(--text-secondary)' }}>
+            {profile?.role === 'super_admin' ? '⭐ POS商總管理員' : 
+             profile?.role === 'tenant_admin' ? '🏢 商戶管理員' : 
+             profile?.role === 'store_operator' ? '🏪 門店管理員' : '載入中...'}
+          </div>
         </div>
         <button className="theme-toggle-btn" onClick={toggleTheme} title="切換深淺色主題">
           {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}

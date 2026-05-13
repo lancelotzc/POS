@@ -8,6 +8,9 @@ interface Product { id: string; name: string; category_id: string; price: number
 interface Store { id: string; name: string; store_code: string; }
 
 export default function Menu() {
+  const { profile } = useAuth();
+  const isSuperAdmin = profile?.role === 'super_admin';
+
   const [activeTab, setActiveTab] = useState<'categories' | 'products'>('categories');
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState<string>('');
@@ -248,13 +251,15 @@ export default function Menu() {
         <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
           <UtensilsCrossed /> 主菜單管理 (Master Menu)
         </h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>選擇操作商戶：</span>
-          <select value={selectedTenantId} onChange={(e) => setSelectedTenantId(e.target.value)} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', outline: 'none' }}>
-            <option value="">-- 請選擇商戶 --</option>
-            {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-        </div>
+        {isSuperAdmin && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>選擇操作商戶：</span>
+            <select value={selectedTenantId} onChange={(e) => setSelectedTenantId(e.target.value)} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', outline: 'none' }}>
+              <option value="">-- 請選擇商戶 --</option>
+              {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+        )}
       </div>
 
       {stores.length > 1 ? (

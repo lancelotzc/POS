@@ -9,7 +9,12 @@ interface ModifierOption { id: string; name: string; extra_price: number; modifi
 interface Modifier { id: string; name: string; type: string; }
 interface Recipe { id: string; product_id: string | null; modifier_option_id: string | null; inventory_item_id: string; quantity: number; inventory_item?: InventoryItem; }
 
+import { useAuth } from '../contexts/AuthContext';
+
 export default function Inventory() {
+  const { profile } = useAuth();
+  const isSuperAdmin = profile?.role === 'super_admin';
+
   const [activeTab, setActiveTab] = useState<'materials' | 'recipes'>('materials');
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState('');
@@ -181,11 +186,13 @@ export default function Inventory() {
         <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
           <PackageOpen /> 庫存管理與配方系統 (BOM)
         </h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <select value={selectedTenantId} onChange={(e) => setSelectedTenantId(e.target.value)} style={{ padding: '8px 15px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)' }}>
-            {tenants.length === 0 ? <option value="">無已開通庫存之商戶</option> : tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-        </div>
+        {isSuperAdmin && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <select value={selectedTenantId} onChange={(e) => setSelectedTenantId(e.target.value)} style={{ padding: '8px 15px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)' }}>
+              {tenants.length === 0 ? <option value="">無已開通庫存之商戶</option> : tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+        )}
       </div>
 
       {tenants.length === 0 ? (

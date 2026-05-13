@@ -23,7 +23,12 @@ interface Product {
   combo_settings: ComboSettings | null; 
 }
 
+import { useAuth } from '../contexts/AuthContext';
+
 export default function Combos() {
+  const { profile } = useAuth();
+  const isSuperAdmin = profile?.role === 'super_admin';
+
   const [activeTab, setActiveTab] = useState<'modifiers' | 'combos'>('modifiers');
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState<string>('');
@@ -370,13 +375,15 @@ export default function Combos() {
         <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Layers /> 套餐與加料管理
         </h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>選擇操作商戶：</span>
-          <select value={selectedTenantId} onChange={(e) => setSelectedTenantId(e.target.value)} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', outline: 'none' }}>
-            <option value="">-- 請選擇商戶 --</option>
-            {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-        </div>
+        {isSuperAdmin && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>選擇操作商戶：</span>
+            <select value={selectedTenantId} onChange={(e) => setSelectedTenantId(e.target.value)} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', outline: 'none' }}>
+              <option value="">-- 請選擇商戶 --</option>
+              {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
