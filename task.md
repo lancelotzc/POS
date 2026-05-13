@@ -16,20 +16,20 @@
 - [ ] 建立訂單與支付表 (Orders, Order Items Snapshot, Payments)
 
 ## Phase 3: 雲端後台開發 (POS Cloud - Web Dashboard)
-- [ ] 實作 登入與權限管理模組 (區分 Super Admin 與 Tenant Admin)
-- [ ] 實作 總部管理與門店授權狀態控制 (License Control)
-- [ ] 實作 菜單 / 套餐 / 加料管理模組 (總部絕對控制權)
-- [ ] 實作 庫存管理模組 (全域檢視與彙整)
-- [ ] 實作 儀表板、報表中心與其他 14 項核心模組
+- [x] 實作 登入與權限管理模組 (區分 Super Admin 與 Tenant Admin)
+- [x] 實作 總部管理與門店授權狀態控制 (License Control)
+- [x] 實作 菜單 / 套餐 / 加料管理模組 (總部絕對控制權)
+- [x] 實作 庫存管理模組 (全域檢視與彙整)
+- [/] 實作 儀表板、報表中心與其他 14 項核心模組
 
 ## Phase 4: 地端終端系統開發 (POS Edge - Local Terminal)
-- [ ] 實作 地端主從架構 (Local Master-Slave WebSocket Server & Client)
-- [ ] 實作 離線防衝撞機制 (門店代號 + 機台代號 + UUID 產生帳單號)
-- [ ] 實作 員工登入與開/交班模組
-- [ ] 實作 餐飲模式 (點餐、桌況鎖定、三大套餐邏輯、訂單快照)
-- [ ] 實作 零售與混合模式 (條碼掃描、商品/原物料雙軌扣庫存)
-- [ ] 實作 門店專屬「售完 (86)」管理模組
-- [ ] 實作 多元支付手動登錄與結帳對帳防呆邏輯
+- [ ] 建立 Supabase `orders` 與 `order_items` 資料表與 RLS
+- [ ] `pos-edge` 專案初始化與依賴套件安裝 (SQLite WASM, Zustand, React Router)
+- [ ] 實作 門店登入驗證與設備授權檢查 (License Validation)
+- [ ] 實作 離線資料庫 (SQLite OPFS) 初始化與全量資料同步 (Sync)
+- [ ] 實作 背景同步機制 (Web Worker 傳送訂單、接收雲端菜單更新)
+- [ ] 實作 POS 點餐主畫面 (分類、商品、購物車、雙主題切換)
+- [ ] 實作 餐飲模式與多元支付結帳邏輯 (寫入本地 SQLite)
 
 ## Phase 5: 雲地雙向同步機制 (Cloud-Edge Sync Engine)
 - [ ] 實作 下發機制 (Cloud ➡️ Edge)：透過 Supabase Realtime 即時下發菜單、設定
