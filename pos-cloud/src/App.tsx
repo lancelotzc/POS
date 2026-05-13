@@ -10,6 +10,7 @@ import Stores from './pages/Stores';
 import Menu from './pages/Menu';
 import Combos from './pages/Combos';
 import Inventory from './pages/Inventory';
+import Staff from './pages/Staff';
 import './styles/theme.css';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -43,6 +44,7 @@ function App() {
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/hq" element={<ProtectedRoute><HQ /></ProtectedRoute>} />
           <Route path="/stores" element={<ProtectedRoute><Stores /></ProtectedRoute>} />
+          <Route path="/staff" element={<ProtectedRoute><Staff /></ProtectedRoute>} />
           <Route path="/menu" element={<ProtectedRoute><Menu /></ProtectedRoute>} />
           <Route path="/combos" element={<ProtectedRoute><Combos /></ProtectedRoute>} />
           <Route path="/promotions" element={<ProtectedRoute><div>優惠折扣 (開發中...)</div></ProtectedRoute>} />
