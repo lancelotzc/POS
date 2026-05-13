@@ -48,9 +48,8 @@ export default function Staff() {
 
   const fetchProfiles = async () => {
     setLoading(true);
-    // Note: We might not be able to get emails directly from auth.users without admin privileges. 
-    // Usually, we'd need an RPC or edge function to list users. We'll fetch profiles for now.
-    const { data } = await supabase.from('profiles').select('*').eq('tenant_id', selectedTenantId);
+    // 取得該商戶下的管理員，以及所有最高權限的 POS商總管理員
+    const { data } = await supabase.from('profiles').select('*').or(`tenant_id.eq.${selectedTenantId},role.eq.super_admin`);
     if (data) setProfiles(data);
     setLoading(false);
   };
