@@ -174,6 +174,17 @@ export default function Staff() {
                   <option value="super_admin">POS商總管理員 (可看和異動所有資料)</option>
                 </select>
               </div>
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>目標商戶</label>
+                {newCloudUser.role === 'super_admin' ? (
+                  <input type="text" readOnly value="無限制 (全品牌)" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-sidebar)', color: 'var(--text-secondary)', boxSizing: 'border-box', cursor: 'not-allowed' }} disabled />
+                ) : (
+                  <select required value={selectedTenantId} onChange={e => setSelectedTenantId(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', boxSizing: 'border-box' }}>
+                    <option value="">-- 請選擇商戶 --</option>
+                    {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                )}
+              </div>
               {newCloudUser.role === 'store_operator' && (
                 <div style={{ marginBottom: '25px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>限制管理門店</label>
