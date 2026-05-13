@@ -7,6 +7,8 @@ interface Category { id: string; name: string; sort_order: number; mode: 'fnb' |
 interface Product { id: string; name: string; category_id: string; price: number; is_active: boolean; sku: string; }
 interface Store { id: string; name: string; store_code: string; }
 
+import { useAuth } from '../contexts/AuthContext';
+
 export default function Menu() {
   const { profile } = useAuth();
   const isSuperAdmin = profile?.role === 'super_admin';
