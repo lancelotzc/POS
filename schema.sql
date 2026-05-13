@@ -195,6 +195,13 @@ CREATE POLICY "Tenant Admins can view own stores" ON stores
         OR 'super_admin' = (SELECT role FROM profiles WHERE id = auth.uid())
     );
 
+CREATE POLICY "Users can view profiles" ON profiles
+    FOR SELECT USING (
+        'super_admin' = (SELECT role FROM profiles WHERE id = auth.uid())
+        OR tenant_id = (SELECT tenant_id FROM profiles WHERE id = auth.uid())
+        OR id = auth.uid()
+    );
+
 -- 更多精細化的 RLS 可在 Supabase Dashboard 依據業務邏輯持續擴充。
 
 -- ==========================================
