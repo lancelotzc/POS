@@ -18,7 +18,7 @@ export default function Staff() {
   
   // Create Modal
   const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
-  const [newCloudUser, setNewCloudUser] = useState({ email: '', password: '', full_name: '', role: 'tenant_admin', store_id: '' });
+  const [newCloudUser, setNewCloudUser] = useState({ email: '', password: '', full_name: '', role: 'tenant_admin', store_id: '', tenant_id: '' });
   
   // Edit Modal
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -85,7 +85,7 @@ export default function Staff() {
 
       alert('雲端帳號建立成功！');
       setIsCloudModalOpen(false);
-      setNewCloudUser({ email: '', password: '', full_name: '', role: 'tenant_admin', store_id: '' });
+      setNewCloudUser({ email: '', password: '', full_name: '', role: 'tenant_admin', store_id: '', tenant_id: '' });
       fetchProfiles();
     } catch (error: any) {
       alert('建立失敗: ' + error.message);
