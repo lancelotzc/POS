@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UtensilsCrossed, Plus, Trash2, X, FolderTree, Package, Store as StoreIcon } from 'lucide-react';
+import { UtensilsCrossed, Plus, Trash2, X, FolderTree, Package, Store as StoreIcon, Edit2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface Tenant { id: string; name: string; }
@@ -19,10 +19,12 @@ export default function Menu() {
 
   // Modals state
   const [isCatModalOpen, setIsCatModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<{ id?: string }>({});
   const [newCatName, setNewCatName] = useState('');
   const [newCatMode, setNewCatMode] = useState<'fnb' | 'retail'>('fnb');
   
   const [isProdModalOpen, setIsProdModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<{ id?: string }>({});
   const [newProd, setNewProd] = useState({ name: '', category_id: '', price: 0, sku: '', track_inventory: false });
   
   // Assign Modal State
@@ -79,29 +81,46 @@ export default function Menu() {
     if (!newCatName.trim() || !selectedTenantId) return;
     setIsSubmitting(true);
     
-    // Insert and return the new record
-    const { data: newCat, error } = await supabase.from('categories').insert([{ 
-      tenant_id: selectedTenantId, 
-      name: newCatName, 
-      sort_order: categories.length + 1,
-      mode: newCatMode
-    }]).select().single();
-    
-    if (!error && newCat) {
-      // Auto-assign if only 1 store exists
-      if (stores.length === 1) {
-        await supabase.from('store_category_status').insert({
-          store_id: stores[0].id,
-          category_id: newCat.id,
-          is_available: true
-        });
+    if (editingCategory.id) {
+      const { error } = await supabase.from('categories').update({
+        name: newCatName,
+        mode: newCatMode
+      }).eq('id', editingCategory.id);
+      
+      if (!error) {
+        setIsCatModalOpen(false); 
+        setEditingCategory({});
+        setNewCatName(''); 
+        setNewCatMode('fnb');
+        fetchCategories(); 
+      } else {
+        alert('修改失敗：' + error?.message);
       }
-      setIsCatModalOpen(false); 
-      setNewCatName(''); 
-      setNewCatMode('fnb');
-      fetchCategories(); 
     } else {
-      alert('新增失敗：' + error?.message);
+      // Insert and return the new record
+      const { data: newCat, error } = await supabase.from('categories').insert([{ 
+        tenant_id: selectedTenantId, 
+        name: newCatName, 
+        sort_order: categories.length + 1,
+        mode: newCatMode
+      }]).select().single();
+      
+      if (!error && newCat) {
+        // Auto-assign if only 1 store exists
+        if (stores.length === 1) {
+          await supabase.from('store_category_status').insert({
+            store_id: stores[0].id,
+            category_id: newCat.id,
+            is_available: true
+          });
+        }
+        setIsCatModalOpen(false); 
+        setNewCatName(''); 
+        setNewCatMode('fnb');
+        fetchCategories(); 
+      } else {
+        alert('新增失敗：' + error?.message);
+      }
     }
     setIsSubmitting(false);
   };
@@ -111,48 +130,66 @@ export default function Menu() {
     if (!newProd.name || !newProd.category_id || !selectedTenantId) return;
     setIsSubmitting(true);
     
-    const { data: newProduct, error } = await supabase.from('products').insert([{ 
-      tenant_id: selectedTenantId, 
-      category_id: newProd.category_id, 
-      name: newProd.name, 
-      price: newProd.price, 
-      sku: newProd.sku || null 
-    }]).select().single();
-    
-    if (!error && newProduct) {
-      // Auto-assign if only 1 store exists
-      if (stores.length === 1) {
-        await supabase.from('store_product_status').insert({
-          store_id: stores[0].id,
-          product_id: newProduct.id,
-          is_available: true
-        });
+    if (editingProduct.id) {
+      const { error } = await supabase.from('products').update({
+        category_id: newProd.category_id, 
+        name: newProd.name, 
+        price: newProd.price, 
+        sku: newProd.sku || null 
+      }).eq('id', editingProduct.id);
+      
+      if (!error) {
+        setIsProdModalOpen(false); 
+        setEditingProduct({});
+        setNewProd({ name: '', category_id: '', price: 0, sku: '', track_inventory: false }); 
+        fetchProducts(); 
+      } else {
+        alert('修改失敗：' + error?.message);
       }
-
-      // Retail Auto-BOM (1:1 Inventory Tracking)
-      if (newProd.track_inventory) {
-        const { data: invItem } = await supabase.from('inventory_items').insert([{
-          tenant_id: selectedTenantId,
-          name: newProd.name,
-          sku: newProd.sku || null,
-          unit: '個' // 預設單位
-        }]).select().single();
-
-        if (invItem) {
-          await supabase.from('recipes').insert([{
-            tenant_id: selectedTenantId,
-            product_id: newProduct.id,
-            inventory_item_id: invItem.id,
-            quantity: 1
-          }]);
-        }
-      }
-
-      setIsProdModalOpen(false); 
-      setNewProd({ name: '', category_id: '', price: 0, sku: '', track_inventory: false }); 
-      fetchProducts(); 
     } else {
-      alert('新增失敗：' + error?.message);
+      const { data: newProduct, error } = await supabase.from('products').insert([{ 
+        tenant_id: selectedTenantId, 
+        category_id: newProd.category_id, 
+        name: newProd.name, 
+        price: newProd.price, 
+        sku: newProd.sku || null 
+      }]).select().single();
+      
+      if (!error && newProduct) {
+        // Auto-assign if only 1 store exists
+        if (stores.length === 1) {
+          await supabase.from('store_product_status').insert({
+            store_id: stores[0].id,
+            product_id: newProduct.id,
+            is_available: true
+          });
+        }
+
+        // Retail Auto-BOM (1:1 Inventory Tracking)
+        if (newProd.track_inventory) {
+          const { data: invItem } = await supabase.from('inventory_items').insert([{
+            tenant_id: selectedTenantId,
+            name: newProd.name,
+            sku: newProd.sku || null,
+            unit: '個' // 預設單位
+          }]).select().single();
+
+          if (invItem) {
+            await supabase.from('recipes').insert([{
+              tenant_id: selectedTenantId,
+              product_id: newProduct.id,
+              inventory_item_id: invItem.id,
+              quantity: 1
+            }]);
+          }
+        }
+
+        setIsProdModalOpen(false); 
+        setNewProd({ name: '', category_id: '', price: 0, sku: '', track_inventory: false }); 
+        fetchProducts(); 
+      } else {
+        alert('新增失敗：' + error?.message);
+      }
     }
     setIsSubmitting(false);
   };
@@ -250,7 +287,7 @@ export default function Menu() {
           {activeTab === 'categories' && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
-                <button onClick={() => setIsCatModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--accent-color)', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' }}>
+                <button onClick={() => { setEditingCategory({}); setNewCatName(''); setNewCatMode('fnb'); setIsCatModalOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--accent-color)', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' }}>
                   <Plus size={16} /> 新增分類
                 </button>
               </div>
@@ -280,6 +317,7 @@ export default function Menu() {
                           {stores.length > 1 && (
                             <button onClick={() => openAssignModal(c.id, c.name, 'category')} title="分派至門店" style={{ display: 'flex', alignItems: 'center', background: 'rgba(59, 130, 246, 0.15)', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '8px', borderRadius: '6px' }}><StoreIcon size={16} /></button>
                           )}
+                          <button onClick={() => { setEditingCategory({ id: c.id }); setNewCatName(c.name); setNewCatMode(c.mode); setIsCatModalOpen(true); }} style={{ display: 'flex', alignItems: 'center', background: 'var(--sidebar-hover-bg)', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '8px', borderRadius: '6px' }}><Edit2 size={16} /></button>
                           <button style={{ display: 'flex', alignItems: 'center', background: 'var(--danger-bg)', border: 'none', color: 'var(--danger-color)', cursor: 'pointer', padding: '8px', borderRadius: '6px' }}><Trash2 size={16} /></button>
                         </td>
                       </tr>
@@ -294,7 +332,7 @@ export default function Menu() {
           {activeTab === 'products' && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
-                <button onClick={() => setIsProdModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--accent-color)', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' }}>
+                <button onClick={() => { setEditingProduct({}); setNewProd({ name: '', category_id: '', price: 0, sku: '', track_inventory: false }); setIsProdModalOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'var(--accent-color)', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '8px', cursor: 'pointer', fontWeight: '500' }}>
                   <Plus size={16} /> 新增單品
                 </button>
               </div>
@@ -324,6 +362,7 @@ export default function Menu() {
                           {stores.length > 1 && (
                             <button onClick={() => openAssignModal(p.id, p.name, 'product')} title="分派至門店" style={{ display: 'flex', alignItems: 'center', background: 'rgba(59, 130, 246, 0.15)', border: 'none', color: '#3b82f6', cursor: 'pointer', padding: '8px', borderRadius: '6px' }}><StoreIcon size={16} /></button>
                           )}
+                          <button onClick={() => { setEditingProduct({ id: p.id }); setNewProd({ name: p.name, category_id: p.category_id, price: p.price, sku: p.sku || '', track_inventory: false }); setIsProdModalOpen(true); }} style={{ display: 'flex', alignItems: 'center', background: 'var(--sidebar-hover-bg)', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '8px', borderRadius: '6px' }}><Edit2 size={16} /></button>
                           <button style={{ display: 'flex', alignItems: 'center', background: 'var(--danger-bg)', border: 'none', color: 'var(--danger-color)', cursor: 'pointer', padding: '8px', borderRadius: '6px' }}><Trash2 size={16} /></button>
                         </td>
                       </tr>
@@ -386,7 +425,7 @@ export default function Menu() {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: 'var(--bg-sidebar)', padding: '30px', borderRadius: '12px', width: '400px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0, fontSize: '18px' }}>建立新分類</h2>
+              <h2 style={{ margin: 0, fontSize: '18px' }}>{editingCategory.id ? '編輯分類' : '建立新分類'}</h2>
               <button onClick={() => setIsCatModalOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
             </div>
             <form onSubmit={handleCreateCategory}>
@@ -409,7 +448,7 @@ export default function Menu() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button type="button" onClick={() => setIsCatModalOpen(false)} style={{ padding: '10px 15px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer' }}>取消</button>
-                <button type="submit" disabled={isSubmitting} style={{ padding: '10px 15px', borderRadius: '6px', border: 'none', background: 'var(--accent-color)', color: 'white', cursor: 'pointer' }}>確認建立</button>
+                <button type="submit" disabled={isSubmitting} style={{ padding: '10px 15px', borderRadius: '6px', border: 'none', background: 'var(--accent-color)', color: 'white', cursor: 'pointer' }}>{editingCategory.id ? '儲存修改' : '確認建立'}</button>
               </div>
             </form>
           </div>
@@ -420,7 +459,7 @@ export default function Menu() {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: 'var(--bg-sidebar)', padding: '30px', borderRadius: '12px', width: '400px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0, fontSize: '18px' }}>建立新單品</h2>
+              <h2 style={{ margin: 0, fontSize: '18px' }}>{editingProduct.id ? '編輯單品' : '建立新單品'}</h2>
               <button onClick={() => setIsProdModalOpen(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
             </div>
             <form onSubmit={handleCreateProduct}>
@@ -443,6 +482,7 @@ export default function Menu() {
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>價格</label>
                 <input required type="number" min="0" value={newProd.price} onChange={(e) => setNewProd({...newProd, price: Number(e.target.value)})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', boxSizing: 'border-box' }} />
               </div>
+              {!editingProduct.id && (
               <div style={{ marginBottom: '25px', padding: '15px', background: 'rgba(59, 130, 246, 0.05)', borderRadius: '8px', border: '1px dashed #3b82f6' }}>
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
                   <input 
@@ -459,9 +499,10 @@ export default function Menu() {
                   </div>
                 </label>
               </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button type="button" onClick={() => setIsProdModalOpen(false)} style={{ padding: '10px 15px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)', cursor: 'pointer' }}>取消</button>
-                <button type="submit" disabled={isSubmitting} style={{ padding: '10px 15px', borderRadius: '6px', border: 'none', background: 'var(--accent-color)', color: 'white', cursor: 'pointer' }}>確認建立</button>
+                <button type="submit" disabled={isSubmitting} style={{ padding: '10px 15px', borderRadius: '6px', border: 'none', background: 'var(--accent-color)', color: 'white', cursor: 'pointer' }}>{editingProduct.id ? '儲存修改' : '確認建立'}</button>
               </div>
             </form>
           </div>
