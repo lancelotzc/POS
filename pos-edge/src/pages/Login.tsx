@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Store, KeyRound, Loader2, LogOut } from 'lucide-react';
+import { Store, ArrowRight, Loader2, LogOut } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -12,32 +12,61 @@ export default function Login() {
   const navigate = useNavigate();
   const { session, profile } = useAuth();
   
-  // For admins to pick a store
+  const [availableTenants, setAvailableTenants] = useState<{id: string, name: string}[]>([]);
+  const [selectedTenantId, setSelectedTenantId] = useState<string>('');
   const [availableStores, setAvailableStores] = useState<{id: string, name: string}[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
 
   useEffect(() => {
     if (session && profile) {
+      const savedStoreId = localStorage.getItem('pos_store_id');
+      if (savedStoreId) {
+        navigate('/pos');
+        return;
+      }
+
       if (profile.role === 'store_operator' && profile.store_id) {
-        // Auto navigate to POS
         localStorage.setItem('pos_store_id', profile.store_id);
         navigate('/pos');
       } else {
-        // Fetch stores for admin to select
-        fetchStoresForAdmin();
+        fetchDataForAdmin(profile.role);
       }
     }
   }, [session, profile]);
 
-  const fetchStoresForAdmin = async () => {
-    let query = supabase.from('stores').select('id, name');
-    // RLS handles filtering automatically!
-    const { data } = await query;
-    if (data) {
-      setAvailableStores(data);
-      if (data.length > 0) setSelectedStoreId(data[0].id);
+  const fetchDataForAdmin = async (role: string) => {
+    if (role === 'super_admin') {
+      const { data: tenants } = await supabase.from('tenants').select('id, name');
+      if (tenants && tenants.length > 0) {
+        setAvailableTenants(tenants);
+        setSelectedTenantId(tenants[0].id);
+        fetchStores(tenants[0].id);
+      }
+    } else if (role === 'tenant_admin') {
+      fetchStores();
     }
   };
+
+  const fetchStores = async (tenantId?: string) => {
+    let query = supabase.from('stores').select('id, name');
+    if (tenantId) query = query.eq('tenant_id', tenantId);
+    
+    const { data: stores } = await query;
+    if (stores) {
+      setAvailableStores(stores);
+      if (stores.length > 0) {
+        setSelectedStoreId(stores[0].id);
+      } else {
+        setSelectedStoreId('');
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (profile?.role === 'super_admin' && selectedTenantId) {
+      fetchStores(selectedTenantId);
+    }
+  }, [selectedTenantId]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +74,7 @@ export default function Login() {
     setError(null);
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setError(error.message);
+    if (error) setError('帳號或密碼錯誤');
     setLoading(false);
   };
 
@@ -60,85 +89,144 @@ export default function Login() {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: 'var(--bg-app)' }}>
-      {/* Left side: Brand / Image */}
-      <div style={{ flex: 1, background: 'linear-gradient(135deg, #1e3a8a, #3b82f6)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', padding: '40px' }}>
-        <Store size={80} style={{ marginBottom: '20px' }} />
-        <h1 style={{ fontSize: '3rem', margin: '0 0 10px 0' }}>POS Edge</h1>
-        <p style={{ fontSize: '1.2rem', opacity: 0.8, textAlign: 'center' }}>
-          門店專用智能結帳終端<br/>高速・離線可用・自動同步
+    <div style={{ 
+      display: 'flex', 
+      minHeight: '100vh', 
+      background: 'var(--bg-app)', 
+      backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(59,130,246,0.1) 0%, transparent 50%)',
+      alignItems: 'center', 
+      justifyContent: 'center',
+      padding: '20px',
+      fontFamily: "'Inter', sans-serif"
+    }}>
+      
+      <div style={{
+        width: '100%',
+        maxWidth: '420px',
+        background: 'var(--bg-sidebar)',
+        borderRadius: '24px',
+        padding: '40px',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        border: '1px solid var(--border-color)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center'
+      }}>
+        
+        {/* Logo Area */}
+        <div style={{
+          width: '64px',
+          height: '64px',
+          background: 'rgba(59, 130, 246, 0.1)',
+          borderRadius: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: '24px',
+          color: '#3b82f6'
+        }}>
+          <Store size={32} />
+        </div>
+        
+        <h1 style={{ fontSize: '1.75rem', fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 8px 0', letterSpacing: '-0.02em' }}>
+          TWPOS
+        </h1>
+        <p style={{ color: 'var(--text-secondary)', margin: '0 0 32px 0', fontSize: '0.95rem' }}>
+          請登入以開始您的作業
         </p>
-      </div>
 
-      {/* Right side: Login Form */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
-        <div style={{ width: '100%', maxWidth: '400px' }}>
+        <div style={{ width: '100%' }}>
           {!session ? (
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <h2 style={{ margin: '0 0 10px 0', fontSize: '2rem', color: 'var(--text-primary)' }}>員工登入</h2>
-              <p style={{ margin: '0 0 20px 0', color: 'var(--text-secondary)' }}>請輸入您的門店帳號密碼</p>
               
               {error && (
-                <div style={{ padding: '15px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                <div style={{ padding: '12px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '12px', border: '1px solid rgba(239, 68, 68, 0.2)', fontSize: '0.9rem', textAlign: 'center' }}>
                   {error}
                 </div>
               )}
 
               <div>
-                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)' }}>Email / 帳號</label>
                 <input 
                   type="email" 
+                  placeholder="帳號 (Email)"
                   value={email} 
                   onChange={(e) => setEmail(e.target.value)} 
                   required 
-                  style={{ width: '100%', padding: '12px 15px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-sidebar)', color: 'var(--text-primary)', boxSizing: 'border-box' }} 
+                  style={{ width: '100%', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', boxSizing: 'border-box', fontSize: '1rem', outline: 'none', transition: 'border-color 0.2s' }} 
+                  onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                  onBlur={(e) => e.target.style.borderColor = 'var(--border-color)'}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)' }}>密碼</label>
                 <input 
                   type="password" 
+                  placeholder="密碼"
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)} 
                   required 
-                  style={{ width: '100%', padding: '12px 15px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-sidebar)', color: 'var(--text-primary)', boxSizing: 'border-box' }} 
+                  style={{ width: '100%', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', boxSizing: 'border-box', fontSize: '1rem', outline: 'none', transition: 'border-color 0.2s' }} 
+                  onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                  onBlur={(e) => e.target.style.borderColor = 'var(--border-color)'}
                 />
               </div>
 
               <button 
                 type="submit" 
                 disabled={loading}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', width: '100%', padding: '15px', background: 'var(--accent-color)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1.1rem', fontWeight: 'bold', cursor: loading ? 'not-allowed' : 'pointer', transition: 'all 0.2s', marginTop: '10px' }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '16px', background: 'var(--text-primary)', color: 'var(--bg-app)', border: 'none', borderRadius: '12px', fontSize: '1rem', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', transition: 'opacity 0.2s', marginTop: '8px' }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
               >
-                {loading ? <Loader2 className="animate-spin" /> : <KeyRound />}
-                登入系統
+                {loading ? <Loader2 className="animate-spin" size={20} /> : '登入'}
               </button>
             </form>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'center' }}>
-              <div style={{ padding: '20px', background: 'var(--bg-sidebar)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                <h2 style={{ margin: '0 0 10px 0', color: 'var(--text-primary)' }}>管理員身分確認</h2>
-                <p style={{ color: 'var(--text-secondary)', marginBottom: '20px' }}>您目前以管理員 ({profile?.full_name || session.user.email}) 身分登入，請選擇要模擬操作的門店：</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
+              <div style={{ padding: '24px', background: 'var(--bg-app)', borderRadius: '16px', border: '1px solid var(--border-color)', textAlign: 'center' }}>
+                <div style={{ width: '48px', height: '48px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', color: '#3b82f6', fontSize: '1.2rem', fontWeight: 'bold' }}>
+                  {profile?.full_name?.charAt(0).toUpperCase() || profile?.email?.charAt(0).toUpperCase()}
+                </div>
+                <h2 style={{ margin: '0 0 4px 0', color: 'var(--text-primary)', fontSize: '1.1rem' }}>{profile?.full_name || session.user.email}</h2>
+                <p style={{ color: 'var(--text-secondary)', margin: '0 0 24px 0', fontSize: '0.85rem' }}>請選擇要登入的門店</p>
                 
+                {profile?.role === 'super_admin' && (
+                  <select 
+                    value={selectedTenantId} 
+                    onChange={(e) => setSelectedTenantId(e.target.value)}
+                    style={{ width: '100%', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--bg-sidebar)', color: 'var(--text-primary)', marginBottom: '12px', outline: 'none' }}
+                  >
+                    {availableTenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                )}
+
                 <select 
                   value={selectedStoreId} 
                   onChange={(e) => setSelectedStoreId(e.target.value)}
-                  style={{ width: '100%', padding: '12px 15px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-app)', color: 'var(--text-primary)', marginBottom: '20px' }}
+                  disabled={availableStores.length === 0}
+                  style={{ width: '100%', padding: '14px', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'var(--bg-sidebar)', color: 'var(--text-primary)', marginBottom: '24px', opacity: availableStores.length === 0 ? 0.5 : 1, outline: 'none' }}
                 >
-                  {availableStores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  {availableStores.length > 0 
+                    ? availableStores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)
+                    : <option value="">無門店資料</option>
+                  }
                 </select>
 
-                <button onClick={handleSelectStore} style={{ width: '100%', padding: '15px', background: 'var(--accent-color)', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', marginBottom: '10px' }}>
-                  進入門店系統
+                <button onClick={handleSelectStore} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '14px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '10px', fontSize: '1rem', fontWeight: '500', cursor: 'pointer', marginBottom: '12px' }}>
+                  進入系統 <ArrowRight size={18} />
                 </button>
-                <button onClick={handleLogout} style={{ width: '100%', padding: '15px', background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', borderRadius: '8px', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                  <LogOut size={18} /> 切換帳號
+                <button onClick={handleLogout} style={{ width: '100%', padding: '14px', background: 'transparent', color: 'var(--text-secondary)', border: 'none', borderRadius: '10px', fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <LogOut size={16} /> 改用其他帳號
                 </button>
               </div>
             </div>
           )}
         </div>
+      </div>
+      
+      {/* Subtle footer */}
+      <div style={{ position: 'absolute', bottom: '20px', color: 'var(--text-secondary)', fontSize: '0.8rem', opacity: 0.6 }}>
+        TWPOS Edge Terminal v1.0.0
       </div>
     </div>
   );

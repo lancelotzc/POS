@@ -58,11 +58,13 @@ export async function initDb() {
 
     CREATE TABLE IF NOT EXISTS orders (
       id TEXT PRIMARY KEY,
+      tenant_id TEXT NOT NULL,
       store_id TEXT NOT NULL,
       order_number TEXT NOT NULL,
-      total_amount REAL NOT NULL,
-      payment_method TEXT NOT NULL,
+      type TEXT NOT NULL,
       status TEXT NOT NULL,
+      pay_status TEXT NOT NULL,
+      total_amount REAL NOT NULL,
       created_at TEXT NOT NULL,
       synced_at TEXT
     );
@@ -71,11 +73,17 @@ export async function initDb() {
       id TEXT PRIMARY KEY,
       order_id TEXT NOT NULL,
       product_id TEXT NOT NULL,
-      product_name TEXT NOT NULL,
+      snapshot TEXT NOT NULL,
       quantity INTEGER NOT NULL,
-      unit_price REAL NOT NULL,
-      subtotal REAL NOT NULL,
-      modifiers TEXT
+      subtotal REAL NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS payment_records (
+      id TEXT PRIMARY KEY,
+      order_id TEXT NOT NULL,
+      payment_method TEXT NOT NULL,
+      amount REAL NOT NULL,
+      created_at TEXT NOT NULL
     );
   `;
 }

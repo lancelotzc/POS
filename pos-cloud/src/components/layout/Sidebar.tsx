@@ -23,6 +23,7 @@ export default function Sidebar() {
     { path: '/promotions', name: '優惠折扣', icon: <Tag size={20} />, requireSuperAdmin: false },
     { path: '/members', name: '會員管理', icon: <Users size={20} />, requireSuperAdmin: false },
     { path: '/invoices', name: '發票字軌', icon: <FileText size={20} />, requireSuperAdmin: false },
+    { path: '/orders', name: '訂單管理', icon: <ClipboardList size={20} />, requireSuperAdmin: false },
     { path: '/inventory', name: '庫存管理', icon: <Boxes size={20} />, requireSuperAdmin: false },
     { path: '/reports', name: '報表中心', icon: <BarChart3 size={20} />, requireSuperAdmin: false },
     { path: '/sync', name: '同步監控', icon: <RefreshCw size={20} />, requireSuperAdmin: false },

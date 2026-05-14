@@ -11,6 +11,7 @@ import Menu from './pages/Menu';
 import Combos from './pages/Combos';
 import Inventory from './pages/Inventory';
 import Staff from './pages/Staff';
+import Orders from './pages/Orders';
 import './styles/theme.css';
 
 function ProtectedRoute({ children, requireSuperAdmin = false }: { children: React.ReactNode, requireSuperAdmin?: boolean }) {
@@ -54,6 +55,7 @@ function App() {
           <Route path="/promotions" element={<ProtectedRoute><div>優惠折扣 (開發中...)</div></ProtectedRoute>} />
           <Route path="/members" element={<ProtectedRoute><div>會員管理 (開發中...)</div></ProtectedRoute>} />
           <Route path="/invoices" element={<ProtectedRoute><div>發票字軌 (開發中...)</div></ProtectedRoute>} />
+          <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
           <Route path="/inventory" element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute><div>報表中心 (開發中...)</div></ProtectedRoute>} />
           <Route path="/sync" element={<ProtectedRoute><div>同步監控 (開發中...)</div></ProtectedRoute>} />
