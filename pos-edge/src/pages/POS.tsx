@@ -227,7 +227,6 @@ export default function POS() {
                 style={{ 
                   padding: '10px 20px', 
                   borderRadius: '20px', 
-                  border: 'none', 
                   whiteSpace: 'nowrap',
                   cursor: 'pointer',
                   fontWeight: '600',

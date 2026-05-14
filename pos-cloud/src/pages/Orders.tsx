@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Search, Eye, Filter, RefreshCw, X } from 'lucide-react';
+import { Eye, RefreshCw, X } from 'lucide-react';
 
 export default function Orders() {
   const { profile } = useAuth();

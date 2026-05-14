@@ -25,7 +25,6 @@ export default function OrderHistoryModal({ onClose }: OrderHistoryModalProps) {
 
       // Fetch items for these orders
       if (ordersData.length > 0) {
-        const orderIds = ordersData.map(o => `'${o.id}'`).join(',');
         // SQLocal query with raw string might be tricky, better to query all or use IN with loop
         // Since it's a local SQLite, querying all order_items and filtering is fast enough for 50 orders
         const itemsData = await db.sql`SELECT * FROM order_items`;
