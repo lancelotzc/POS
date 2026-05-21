@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, RefreshCw, Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { db, initDb } from '../lib/db';
@@ -10,7 +9,10 @@ import { useCartStore } from '../store/cartStore';
 import type { CartModifier } from '../store/cartStore';
 import ModifierModal from '../components/ModifierModal';
 import OrderHistoryModal from '../components/OrderHistoryModal';
-import { FileText } from 'lucide-react';
+import ComboModal from '../components/ComboModal';
+import SettingsModal from '../components/SettingsModal';
+import TableMap from '../components/TableMap';
+import { FileText, Settings as SettingsIcon, LogOut, RefreshCw, Lock, ArrowLeft, Send } from 'lucide-react';
 
 export default function POS() {
   const { profile } = useAuth();
@@ -30,8 +32,19 @@ export default function POS() {
   const { items: cartItems, addToCart, removeFromCart, updateQuantity, getTotalAmount } = useCartStore();
   const [selectedProductForModal, setSelectedProductForModal] = useState<any | null>(null);
   
-  // Order History
+  // Order History & Settings
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
+  // Checkout Mode & Tables
+  const [checkoutMode, setCheckoutMode] = useState<'pay_first' | 'pay_later'>('pay_first');
+  const [activeTable, setActiveTable] = useState<{id: string, name: string} | null>(null);
+  const [soldOutStatus, setSoldOutStatus] = useState<Record<string, boolean>>({});
+
+  const loadSettings = () => {
+    const mode = localStorage.getItem('pos_checkout_mode') as 'pay_first' | 'pay_later' || 'pay_first';
+    setCheckoutMode(mode);
+  };
 
   useEffect(() => {
     const id = localStorage.getItem('pos_store_id');
@@ -43,6 +56,7 @@ export default function POS() {
     
     // Check license and sync on mount
     validateAndSync(id);
+    loadSettings();
   }, [navigate]);
 
   const validateAndSync = async (id: string) => {
@@ -109,12 +123,32 @@ export default function POS() {
       if (cats.length > 0) {
         setActiveCategoryId(cats[0].id);
       }
+
+      // Fetch sold out status from Supabase directly for simplicity (in a fully offline mode, we'd query SQLite)
+      const storeId = localStorage.getItem('pos_store_id');
+      if (storeId) {
+        const { data } = await supabase.from('store_product_status').select('product_id, is_sold_out').eq('store_id', storeId);
+        if (data) {
+          const statusMap: Record<string, boolean> = {};
+          data.forEach(row => {
+            statusMap[row.product_id] = row.is_sold_out;
+          });
+          setSoldOutStatus(statusMap);
+        }
+      }
     } catch (err) {
       console.error('Error loading local data:', err);
     }
   };
 
   const handleProductClick = async (prod: any) => {
+    if (soldOutStatus[prod.id]) return;
+
+    if (prod.is_combo) {
+      setSelectedProductForModal(prod);
+      return;
+    }
+
     // Check if product has modifiers
     const res = await db.sql`SELECT count(*) as count FROM product_modifiers WHERE product_id = ${prod.id}`;
     const hasModifiers = res[0].count > 0;
@@ -147,12 +181,29 @@ export default function POS() {
     if (!storeId || !tenantId) return;
     try {
       const { processCheckout } = await import('../lib/checkout');
-      const { orderNumber } = await processCheckout(cartItems, storeId, tenantId, 'cash');
+      // If activeTable exists, it's a pay_later checkout (we actually want to pay the bill)
+      const { orderNumber } = await processCheckout(cartItems, storeId, tenantId, 'cash', activeTable?.id);
       
       alert(`結帳成功！單號：${orderNumber}`);
       useCartStore.getState().clearCart();
+      if (activeTable) setActiveTable(null); // Return to table map
     } catch (err: any) {
       alert(`結帳失敗：${err.message}`);
+    }
+  };
+
+  const handleSendToKitchen = async () => {
+    if (!storeId || !tenantId || !activeTable) return;
+    try {
+      // Send to kitchen means creating an unpaid order
+      const { processUnpaidOrder } = await import('../lib/checkout');
+      const { orderNumber } = await processUnpaidOrder(cartItems, storeId, tenantId, activeTable.id);
+      
+      alert(`送單成功！單號：${orderNumber}`);
+      useCartStore.getState().clearCart();
+      setActiveTable(null); // Return to table map
+    } catch (err: any) {
+      alert(`送單失敗：${err.message}`);
     }
   };
 
@@ -194,6 +245,19 @@ export default function POS() {
           <span style={{ padding: '4px 8px', background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', borderRadius: '6px', fontSize: '0.9rem', fontWeight: 'bold' }}>
             {storeName}
           </span>
+          {activeTable && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ padding: '4px 8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', borderRadius: '6px', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                桌號：{activeTable.name}
+              </span>
+              <button 
+                onClick={() => setActiveTable(null)}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}
+              >
+                <ArrowLeft size={14} /> 返回桌況
+              </button>
+            </div>
+          )}
           {syncing && <span style={{ color: '#f59e0b', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '5px' }}><RefreshCw size={14} className="animate-spin" /> 同步中...</span>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -203,6 +267,9 @@ export default function POS() {
           </div>
           <button onClick={() => setIsHistoryModalOpen(true)} style={{ background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
             <FileText size={16} /> 歷史訂單
+          </button>
+          <button onClick={() => setIsSettingsOpen(true)} style={{ background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <SettingsIcon size={16} /> 設定
           </button>
           <button onClick={handleLogout} style={{ background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
             <LogOut size={16} /> 交班登出
@@ -217,8 +284,11 @@ export default function POS() {
 
       {/* Main Content */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        <div style={{ flex: 2, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-color)', background: 'var(--bg-app)' }}>
-          {/* Categories Horizontal Scroll */}
+        {checkoutMode === 'pay_later' && !activeTable ? (
+          <TableMap onSelectTable={(id, name) => setActiveTable({ id, name })} />
+        ) : (
+          <div style={{ flex: 2, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-color)', background: 'var(--bg-app)' }}>
+            {/* Categories Horizontal Scroll */}
           <div style={{ display: 'flex', overflowX: 'auto', padding: '15px 20px', gap: '10px', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-sidebar)' }}>
             {categories.map(cat => (
               <button 
@@ -261,20 +331,26 @@ export default function POS() {
                   transition: 'transform 0.1s, box-shadow 0.1s'
                 }}
                 onClick={() => handleProductClick(prod)}
-                onMouseDown={e => e.currentTarget.style.transform = 'scale(0.97)'}
+                onMouseDown={e => e.currentTarget.style.transform = soldOutStatus[prod.id] ? 'scale(1)' : 'scale(0.97)'}
                 onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
                 onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
               >
-                <div style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '1.1rem', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                {soldOutStatus[prod.id] && (
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+                    <span style={{ background: '#ef4444', color: 'white', padding: '4px 12px', borderRadius: '20px', fontWeight: 'bold', fontSize: '0.9rem' }}>已售完</span>
+                  </div>
+                )}
+                <div style={{ fontWeight: '600', color: soldOutStatus[prod.id] ? 'var(--text-secondary)' : 'var(--text-primary)', fontSize: '1.1rem', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                   {prod.name}
                 </div>
-                <div style={{ color: '#3b82f6', fontWeight: 'bold', fontSize: '1.1rem', marginTop: '10px' }}>
+                <div style={{ color: soldOutStatus[prod.id] ? 'var(--text-secondary)' : '#3b82f6', fontWeight: 'bold', fontSize: '1.1rem', marginTop: '10px' }}>
                   ${prod.price}
                 </div>
               </div>
             ))}
           </div>
         </div>
+        )}
         
         {/* Cart Sidebar */}
         <div style={{ flex: 1, padding: '20px', background: 'var(--bg-sidebar)', display: 'flex', flexDirection: 'column' }}>
@@ -328,29 +404,56 @@ export default function POS() {
               <span>總計金額</span>
               <span style={{ fontWeight: 'bold', fontSize: '1.5rem', color: '#3b82f6' }}>${getTotalAmount()}</span>
             </div>
-            <button 
-              disabled={cartItems.length === 0}
-              onClick={handleCheckout}
-              style={{ width: '100%', padding: '20px', background: cartItems.length === 0 ? 'var(--border-color)' : '#3b82f6', color: cartItems.length === 0 ? 'var(--text-secondary)' : 'white', border: 'none', borderRadius: '12px', fontSize: '1.3rem', fontWeight: 'bold', cursor: cartItems.length === 0 ? 'not-allowed' : 'pointer', boxShadow: cartItems.length === 0 ? 'none' : '0 10px 15px -3px rgba(59, 130, 246, 0.3)', transition: 'all 0.2s' }}
-            >
-              現金結帳
-            </button>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              {checkoutMode === 'pay_later' && activeTable && (
+                <button 
+                  disabled={cartItems.length === 0}
+                  onClick={handleSendToKitchen}
+                  style={{ flex: 1, padding: '20px', background: cartItems.length === 0 ? 'var(--border-color)' : '#f59e0b', color: cartItems.length === 0 ? 'var(--text-secondary)' : 'white', border: 'none', borderRadius: '12px', fontSize: '1.2rem', fontWeight: 'bold', cursor: cartItems.length === 0 ? 'not-allowed' : 'pointer', boxShadow: cartItems.length === 0 ? 'none' : '0 10px 15px -3px rgba(245, 158, 11, 0.3)', transition: 'all 0.2s', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}
+                >
+                  <Send size={20} /> 送廚
+                </button>
+              )}
+              <button 
+                disabled={cartItems.length === 0 && !activeTable}
+                onClick={handleCheckout}
+                style={{ flex: checkoutMode === 'pay_first' ? 1 : 2, padding: '20px', background: (cartItems.length === 0 && !activeTable) ? 'var(--border-color)' : '#3b82f6', color: (cartItems.length === 0 && !activeTable) ? 'var(--text-secondary)' : 'white', border: 'none', borderRadius: '12px', fontSize: '1.2rem', fontWeight: 'bold', cursor: (cartItems.length === 0 && !activeTable) ? 'not-allowed' : 'pointer', boxShadow: (cartItems.length === 0 && !activeTable) ? 'none' : '0 10px 15px -3px rgba(59, 130, 246, 0.3)', transition: 'all 0.2s' }}
+              >
+                現金結帳
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Modifier Modal */}
+      {/* Modals */}
       {selectedProductForModal && (
-        <ModifierModal 
-          product={selectedProductForModal} 
-          onClose={() => setSelectedProductForModal(null)}
-          onConfirm={handleModalConfirm}
-        />
+        selectedProductForModal.is_combo ? (
+          <ComboModal 
+            product={selectedProductForModal} 
+            onClose={() => setSelectedProductForModal(null)}
+            onConfirm={handleModalConfirm}
+          />
+        ) : (
+          <ModifierModal 
+            product={selectedProductForModal} 
+            onClose={() => setSelectedProductForModal(null)}
+            onConfirm={handleModalConfirm}
+          />
+        )
       )}
 
       {/* Order History Modal */}
       {isHistoryModalOpen && (
         <OrderHistoryModal onClose={() => setIsHistoryModalOpen(false)} />
+      )}
+
+      {/* Settings Modal */}
+      {isSettingsOpen && (
+        <SettingsModal 
+          onClose={() => setIsSettingsOpen(false)} 
+          onSettingsChanged={loadSettings}
+        />
       )}
     </div>
   );
